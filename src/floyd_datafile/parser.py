@@ -726,7 +726,7 @@ class _Parser:
         if self._failed:
             return
         v__1 = self._val
-        self._succeed(['string', [None, v__1]])
+        self._succeed(['string', ['', v__1]])
 
     def _r_bare_word(self):
         start = self._pos
@@ -737,7 +737,7 @@ class _Parser:
         self._val = self._text[start:end]
 
     def _s_bare_word_1(self):
-        p = '[^\\s\\[\\]\\(\\)\\{\\}:\'"`]+'
+        p = "[^\\s\\[\\]\\(\\)\\{\\}:'\"`]+"
         if p not in self._regexps:
             self._regexps[p] = re.compile(p)
         m = self._regexps[p].match(self._text, self._pos)
@@ -752,7 +752,7 @@ class _Parser:
         if not self._failed:
             return
         self._rewind(p)
-        self._succeed(None)
+        self._succeed('')
 
     def _r_str(self):
         p = self._pos
@@ -1074,6 +1074,14 @@ class _Parser:
             self._r_any()
 
     def _s_tdqchar_1(self):
+        start = self._pos
+        self._s_tdqchar_2()
+        if self._failed:
+            return
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_tdqchar_2(self):
         self._memoize('r_bslash', self._r_bslash)
         if self._failed:
             return
@@ -1098,6 +1106,14 @@ class _Parser:
             self._r_any()
 
     def _s_tbqchar_1(self):
+        start = self._pos
+        self._s_tbqchar_2()
+        if self._failed:
+            return
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_tbqchar_2(self):
         self._memoize('r_bslash', self._r_bslash)
         if self._failed:
             return
@@ -1131,10 +1147,18 @@ class _Parser:
             self._r_any()
 
     def _s_sqchar_1(self):
+        start = self._pos
+        self._s_sqchar_2()
+        if self._failed:
+            return
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_sqchar_2(self):
         self._memoize('r_bslash', self._r_bslash)
         if self._failed:
             return
-        self._memoize('r_escape', self._r_escape)
+        self._memoize('r_squote', self._r_squote)
 
     def _r_dqchar(self):
         p = self._pos
@@ -1155,6 +1179,14 @@ class _Parser:
             self._r_any()
 
     def _s_dqchar_1(self):
+        start = self._pos
+        self._s_dqchar_2()
+        if self._failed:
+            return
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_dqchar_2(self):
         self._memoize('r_bslash', self._r_bslash)
         if self._failed:
             return
@@ -1179,10 +1211,18 @@ class _Parser:
             self._r_any()
 
     def _s_bqchar_1(self):
+        start = self._pos
+        self._s_bqchar_2()
+        if self._failed:
+            return
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_bqchar_2(self):
         self._memoize('r_bslash', self._r_bslash)
         if self._failed:
             return
-        self._memoize('r_escape', self._r_escape)
+        self._memoize('r_bquote', self._r_bquote)
 
     def _r_raw_tag(self):
         p = self._pos
@@ -1405,19 +1445,15 @@ class _Parser:
         if not self._failed:
             return
         self._rewind(p)
-        self._memoize('r_squote', self._r_squote)
+        self._s_escape_8()
         if not self._failed:
             return
         self._rewind(p)
-        self._memoize('r_dquote', self._r_dquote)
+        self._s_escape_9()
         if not self._failed:
             return
         self._rewind(p)
-        self._memoize('r_bquote', self._r_bquote)
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._memoize('r_bslash', self._r_bslash)
+        self._s_escape_10()
         if not self._failed:
             return
         self._rewind(p)
@@ -1432,46 +1468,62 @@ class _Parser:
         self._memoize('r_uni_escape', self._r_uni_escape)
 
     def _s_escape_1(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('b')
         if self._failed:
             return
         self._succeed('\b')
 
     def _s_escape_2(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('f')
         if self._failed:
             return
         self._succeed('\f')
 
     def _s_escape_3(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('n')
         if self._failed:
             return
         self._succeed('\n')
 
     def _s_escape_4(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('r')
         if self._failed:
             return
         self._succeed('\r')
 
     def _s_escape_5(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('t')
         if self._failed:
             return
         self._succeed('\t')
 
     def _s_escape_6(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('v')
         if self._failed:
             return
         self._succeed('\v')
 
     def _s_escape_7(self):
-        self._ch('/')
-        if self._failed:
-            return
-        self._succeed('/')
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_squote', self._r_squote)
+
+    def _s_escape_8(self):
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_dquote', self._r_dquote)
+
+    def _s_escape_9(self):
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_bquote', self._r_bquote)
+
+    def _s_escape_10(self):
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_bslash', self._r_bslash)
 
     def _r_oct_escape(self):
         self._s_oct_escape_1()
@@ -1496,71 +1548,38 @@ class _Parser:
         self._succeed(vs)
 
     def _s_oct_escape_2(self):
+        self._memoize('r__filler', self._r__filler)
         self._range('0', '7')
 
     def _r_hex_escape(self):
-        p = self._pos
-        self._s_hex_escape_1()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_hex_escape_3()
-
-    def _s_hex_escape_1(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('x')
         if self._failed:
             return
-        self._s_hex_escape_2()
+        self._s_hex_escape_1()
         if self._failed:
             return
         v__2 = self._val
         self._succeed(self._fn_xtou(self._fn_cat(v__2)))
 
+    def _s_hex_escape_1(self):
+        vs = []
+        i = 0
+        cmin, cmax = [2, 2]
+        while i < cmax:
+            self._s_hex_escape_2()
+            if self._failed:
+                if i >= cmin:
+                    self._succeed(vs)
+                    return
+                return
+            vs.append(self._val)
+            i += 1
+        self._succeed(vs)
+
     def _s_hex_escape_2(self):
-        vs = []
-        i = 0
-        cmin, cmax = [2, 2]
-        while i < cmax:
-            self._memoize('r_hex', self._r_hex)
-            if self._failed:
-                if i >= cmin:
-                    self._succeed(vs)
-                    return
-                return
-            vs.append(self._val)
-            i += 1
-        self._succeed(vs)
-
-    def _s_hex_escape_3(self):
-        self._ch('x')
-        if self._failed:
-            return
-        self._ch('{')
-        if self._failed:
-            return
-        self._s_hex_escape_4()
-        if self._failed:
-            return
-        v__3 = self._val
-        self._ch('}')
-        if self._failed:
-            return
-        self._succeed(self._fn_xtou(self._fn_cat(v__3)))
-
-    def _s_hex_escape_4(self):
-        vs = []
-        i = 0
-        cmin, cmax = [2, 2]
-        while i < cmax:
-            self._memoize('r_hex', self._r_hex)
-            if self._failed:
-                if i >= cmin:
-                    self._succeed(vs)
-                    return
-                return
-            vs.append(self._val)
-            i += 1
-        self._succeed(vs)
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_hex', self._r_hex)
 
     def _r_uni_escape(self):
         p = self._pos
@@ -1568,13 +1587,10 @@ class _Parser:
         if not self._failed:
             return
         self._rewind(p)
-        self._s_uni_escape_3()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_uni_escape_5()
+        self._s_uni_escape_4()
 
     def _s_uni_escape_1(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('u')
         if self._failed:
             return
@@ -1589,7 +1605,7 @@ class _Parser:
         i = 0
         cmin, cmax = [4, 4]
         while i < cmax:
-            self._memoize('r_hex', self._r_hex)
+            self._s_uni_escape_3()
             if self._failed:
                 if i >= cmin:
                     self._succeed(vs)
@@ -1600,52 +1616,26 @@ class _Parser:
         self._succeed(vs)
 
     def _s_uni_escape_3(self):
-        self._ch('u')
-        if self._failed:
-            return
-        self._ch('{')
-        if self._failed:
-            return
-        self._s_uni_escape_4()
-        if self._failed:
-            return
-        v__3 = self._val
-        self._ch('}')
-        if self._failed:
-            return
-        self._succeed(self._fn_xtou(self._fn_cat(v__3)))
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_hex', self._r_hex)
 
     def _s_uni_escape_4(self):
-        vs = []
-        self._memoize('r_hex', self._r_hex)
-        if self._failed:
-            return
-        vs.append(self._val)
-        while True:
-            p = self._pos
-            self._memoize('r_hex', self._r_hex)
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_uni_escape_5(self):
+        self._memoize('r__filler', self._r__filler)
         self._ch('U')
         if self._failed:
             return
-        self._s_uni_escape_6()
+        self._s_uni_escape_5()
         if self._failed:
             return
         v__2 = self._val
         self._succeed(self._fn_xtou(self._fn_cat(v__2)))
 
-    def _s_uni_escape_6(self):
+    def _s_uni_escape_5(self):
         vs = []
         i = 0
         cmin, cmax = [8, 8]
         while i < cmax:
-            self._memoize('r_hex', self._r_hex)
+            self._s_uni_escape_6()
             if self._failed:
                 if i >= cmin:
                     self._succeed(vs)
@@ -1654,6 +1644,10 @@ class _Parser:
             vs.append(self._val)
             i += 1
         self._succeed(vs)
+
+    def _s_uni_escape_6(self):
+        self._memoize('r__filler', self._r__filler)
+        self._memoize('r_hex', self._r_hex)
 
     def _r_array(self):
         self._memoize('r__filler', self._r__filler)

@@ -79,10 +79,10 @@ tbquote      = "```"
 
 tdquote      = '"""'
 
-tdqchar      = bslash dquote
+tdqchar      = <bslash dquote>
              | ^tdquote
 
-tbqchar      = bslash bquote
+tbqchar      = <bslash bquote>
              | ^tsquote
 
 squote       = "'"
@@ -91,13 +91,13 @@ dquote       = '"'
 
 bquote       = '`'
 
-sqchar       = bslash escape
+sqchar       = <bslash squote>
              | ^squote
 
-dqchar       = bslash dquote
+dqchar       = <bslash dquote>
              | ^dquote
 
-bqchar       = bslash escape
+bqchar       = <bslash bquote>
              | ^bquote
 
 raw_tag      = 'r' string_tag                          -> cat($1, $2)
