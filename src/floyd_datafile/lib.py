@@ -684,10 +684,19 @@ class Encoder:
         # Ideally we'd use collections.abc.Mapping and collections.abc.Sequence
         # here, but for backwards-compatibility with potential old callers,
         # we only check for the two attributes we need in each case.
+        if self.indent:
+            max_len = 80 - level*self.indent
+        else:
+            max_len = 80
         if hasattr(obj, 'keys') and hasattr(obj, '__getitem__'):
-            s = self._encode_dict(obj, seen, level + 1)
+            s = self._encode_dict(obj, seen, level + 1, oneline=True)
+            if len(s) > max_len or '\n' in s:
+                s = self._encode_dict(obj, seen, level + 1, oneline=False)
         elif hasattr(obj, '__getitem__') and hasattr(obj, '__iter__'):
-            s = self._encode_array(obj, seen, level + 1)
+            s = self._encode_array(obj, seen, level + 1, oneline=True)
+            if len(s) > max_len or '\n' in s:
+                s = self._encode_array(obj, seen, level + 1, oneline=False)
+
         else:
             s = self.encode(self.default(obj), seen, level + 1, as_key=False)
             assert s is not None
@@ -695,11 +704,13 @@ class Encoder:
         seen.remove(i)
         return s
 
-    def _encode_dict(self, obj: Any, seen: set, level: int) -> str:
+    def _encode_dict(
+        self, obj: Any, seen: set, level: int, oneline=False
+    ) -> str:
         if not obj:
             return '{}'
 
-        indent_str, end_str = self._spacers(level)
+        indent_str, end_str = self._spacers(level, False)
         item_sep = self.item_separator + indent_str
         kv_sep = self.kv_separator
 
@@ -730,11 +741,13 @@ class Encoder:
         s += end_str + '}'
         return s
 
-    def _encode_array(self, obj: Any, seen: Set, level: int) -> str:
+    def _encode_array(
+        self, obj: Any, seen: Set, level: int, oneline=True
+    ) -> str:
         if not obj:
             return '[]'
 
-        indent_str, end_str = self._spacers(level)
+        indent_str, end_str = self._spacers(level, oneline)
         item_sep = self.item_separator + indent_str
         return (
             '['
@@ -746,7 +759,9 @@ class Encoder:
             + ']'
         )
 
-    def _spacers(self, level: int) -> Tuple[str, str]:
+    def _spacers(self, level: int, oneline: bool) -> Tuple[str, str]:
+        if oneline:
+            return '', ''
         if self.indent is not None:
             end_str = ''
             if isinstance(self.indent, int):
@@ -763,32 +778,6 @@ class Encoder:
             indent_str = ''
             end_str = ''
         return indent_str, end_str
-
-    def _is_id_start(self, ch: str) -> bool:
-        return unicodedata.category(ch) in (
-            'Lu',
-            'Ll',
-            'Li',
-            'Lt',
-            'Lm',
-            'Lo',
-            'Nl',
-        )
-
-    def _is_id_continue(self, ch: str) -> bool:
-        return unicodedata.category(ch) in (
-            'Lu',
-            'Ll',
-            'Li',
-            'Lt',
-            'Lm',
-            'Lo',
-            'Nl',
-            'Nd',
-            'Mn',
-            'Mc',
-            'Pc',
-        )
 
 
 def _raise_type_error(obj) -> Any:
