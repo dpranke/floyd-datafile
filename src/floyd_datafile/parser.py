@@ -97,6 +97,7 @@ class _Parser:
         if self._failed:
             return
         v__1 = self._val
+        self._memoize('r__filler', self._r__filler)
         self._s_grammar_2()
         if self._failed:
             return
@@ -120,6 +121,7 @@ class _Parser:
         if self._failed:
             return
         v__1 = self._val
+        self._memoize('r__filler', self._r__filler)
         self._s_grammar_5()
         if self._failed:
             return
@@ -152,31 +154,6 @@ class _Parser:
             return
         self._memoize('r__filler', self._r__filler)
         self._memoize('r_end', self._r_end)
-
-    def _r_ws(self):
-        vs = []
-        self._s_ws_1()
-        if self._failed:
-            return
-        vs.append(self._val)
-        while True:
-            p = self._pos
-            self._s_ws_1()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_ws_1(self):
-        p = '[ \n\r\t]'
-        if p not in self._regexps:
-            self._regexps[p] = re.compile(p)
-        m = self._regexps[p].match(self._text, self._pos)
-        if m:
-            self._succeed(m.group(0), m.end())
-            return
-        self._fail()
 
     def _r_eol(self):
         p = self._pos
@@ -303,7 +280,7 @@ class _Parser:
         if self._failed:
             return
         v__1 = self._val
-        self._succeed(v__1)
+        self._succeed(['string', ['', v__1]])
 
     def _s_value_13(self):
         self._memoize('r__filler', self._r__filler)
@@ -696,10 +673,6 @@ class _Parser:
             return
         self._rewind(p)
         self._s_string_2()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_string_3()
 
     def _s_string_1(self):
         self._memoize('r_string_tag', self._r_string_tag)
@@ -721,13 +694,6 @@ class _Parser:
         v__2 = self._val
         self._succeed(['string', [v__1, v__2]])
 
-    def _s_string_3(self):
-        self._memoize('r_bare_word', self._r_bare_word)
-        if self._failed:
-            return
-        v__1 = self._val
-        self._succeed(['string', ['', v__1]])
-
     def _r_bare_word(self):
         start = self._pos
         self._s_bare_word_1()
@@ -737,7 +703,7 @@ class _Parser:
         self._val = self._text[start:end]
 
     def _s_bare_word_1(self):
-        p = "[^\\s\\[\\]\\(\\)\\{\\}:'\"`]+"
+        p = "[^\\s\\[\\]\\(\\)\\{\\}:,/#'\"`]+"
         if p not in self._regexps:
             self._regexps[p] = re.compile(p)
         m = self._regexps[p].match(self._text, self._pos)
@@ -1831,7 +1797,29 @@ class _Parser:
         self._memoize('r_number', self._r_number)
 
     def _r__whitespace(self):
-        self._memoize('r_ws', self._r_ws)
+        vs = []
+        self._s__whitespace_1()
+        if self._failed:
+            return
+        vs.append(self._val)
+        while True:
+            p = self._pos
+            self._s__whitespace_1()
+            if self._failed or self._pos == p:
+                self._rewind(p)
+                break
+            vs.append(self._val)
+        self._succeed(vs)
+
+    def _s__whitespace_1(self):
+        p = '[ \n\r\t]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
+            return
+        self._fail()
 
     def _r__comment(self):
         p = self._pos
@@ -1839,23 +1827,13 @@ class _Parser:
         if not self._failed:
             return
         self._rewind(p)
-        self._s__comment_3()
+        self._s__comment_4()
 
     def _s__comment_1(self):
         self._s__comment_2()
         if self._failed:
             return
-        p = self._pos
-        errpos = self._errpos
-        self._memoize('r_eol', self._r_eol)
-        if self._failed:
-            self._succeed(None, p)
-        else:
-            self._rewind(p)
-            self._errpos = errpos
-            self._fail()
-        if not self._failed:
-            self._r_any()
+        self._s__comment_3()
 
     def _s__comment_2(self):
         p = self._pos
@@ -1866,6 +1844,27 @@ class _Parser:
         self._str('//')
 
     def _s__comment_3(self):
+        vs = []
+        while True:
+            p = self._pos
+            p = self._pos
+            errpos = self._errpos
+            self._memoize('r_eol', self._r_eol)
+            if self._failed:
+                self._succeed(None, p)
+            else:
+                self._rewind(p)
+                self._errpos = errpos
+                self._fail()
+            if not self._failed:
+                self._r_any()
+            if self._failed or self._pos == p:
+                self._rewind(p)
+                break
+            vs.append(self._val)
+        self._succeed(vs)
+
+    def _s__comment_4(self):
         self._str('/*')
         if self._failed:
             return

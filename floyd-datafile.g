@@ -1,16 +1,14 @@
-%whitespace  = ws
+%whitespace  = [ \n\r\t]+
 
 %externs     = _consume_trailing
 
-%comment     = ('#'|'//') ^eol
+%comment     = ('#'|'//') ^eol*
              | '/*' ^.'*/'
 
-%tokens      = number | string | bare_word | ws | eol
+%tokens      = number | string | bare_word | eol
 
-grammar      = value (?{_consume_trailing} end)     -> $1
-             | member+ (?{_consume_trailing} end)   -> $1
-
-ws           = [ \n\r\t]+
+grammar      = value _filler (?{_consume_trailing} end)   -> $1
+             | member+ _filler (?{_consume_trailing} end) -> $1
 
 eol          = '\r\n' | '\r' | '\n'
 
@@ -22,7 +20,7 @@ value        = 'true'                               -> ['true', null]
              | string_list                          -> ['string_list', $1]
              | array                                -> ['array', $1]
              | object                               -> ['object', $1]
-             | bare_word                            -> $1
+             | bare_word                            -> ['string', ['', $1]]
 
 number       = ('-'|'+')? int frac? exp?
              | '0b' bin ((bin | '_')* bin)?
@@ -53,9 +51,10 @@ string_list  = '(' string (','? string)* ')'           -> cons($2, $3)
 
 string       = string_tag str                          -> ['string', [$1, $2]]
              | raw_tag raw_str                         -> ['string', [$1, $2]]
-             | bare_word                               -> ['string', ['', $1]]
 
-bare_word    = </[^\s\[\]\(\)\{\}:'"`]+/>
+// Anything that isn't whitespace or one of the punctuation symbols
+// used elsewhere in the grammar.
+bare_word    = </[^\s\[\]\(\)\{\}:,\/#'"`]+/>
 
 string_tag   = 'd'
              |                                         -> ''
