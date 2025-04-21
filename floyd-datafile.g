@@ -1,31 +1,35 @@
 %whitespace  = ws
 
-%comment     = ('#'|'//') ^eol 
+%externs     = _consume_trailing
+
+%comment     = ('#'|'//') ^eol
              | '/*' ^.'*/'
 
-%tokens      = number | id | string
+%tokens      = number | string | bare_word | ws | eol
 
-ws           = [ \n\r\t]*
+grammar      = value (?{_consume_trailing} end)     -> $1
+             | member+ (?{_consume_trailing} end)   -> $1
+
+ws           = [ \n\r\t]+
 
 eol          = '\r\n' | '\r' | '\n'
 
-grammar      = value
-             | member+
-
-value        = 'true'                               -> ['true']
-             | 'false'                              -> ['false']
-             | 'null'                               -> ['null']
-             | <number>                             -> ['number', atof($1)]
-             | string ('++' string)*                -> ['string', scat($1, $2)]
+value        = 'true'                               -> ['true', null]
+             | 'false'                              -> ['false', null]
+             | 'null'                               -> ['null', null]
+             | <number>                             -> ['number', $1]
+             | string                               -> $1
+             | string_list                          -> ['string_list', $1]
              | array                                -> ['array', $1]
              | object                               -> ['object', $1]
+             | bare_word                            -> $1
 
-number       = ('-'|'+')? int frac? exp? 
+number       = ('-'|'+')? int frac? exp?
              | '0b' bin ((bin | '_')* bin)?
              | '0o' oct ((oct | '_')* oct)?
              | '0x' hex ((hex | '_')* hex)?
              | '0X' hex ((hex | '_')* hex)?
-             
+
 int          = '0'
              | nonzerodigit digit_sep
 
@@ -33,57 +37,85 @@ digit_sep    = ((digit | '_')* digit)?
 
 digit        = '0' .. '9'
 
-nonzerodiget = '1' .. '9'
+nonzerodigit = '1' .. '9'
 
-frac         = '.' digit_sep 
+frac         = '.' digit_sep
 
 exp          = ('e'|'E') ('+'|'-')? digit_sep
 
-bin          | '0' | '1'
+bin          = '0' | '1'
 
 oct          = '0'..'7'
 
-hex          = '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' 
-        
-string       = squote sqchar* squote                   -> cat($2)
+hex          = '0' .. '9' | 'a' .. 'f' | 'A' .. 'F'
+
+string_list  = '(' string (','? string)* ')'           -> cons($2, $3)
+
+string       = string_tag str                          -> ['string', [$1, $2]]
+             | raw_tag raw_str                         -> ['string', [$1, $2]]
+             | bare_word                               -> ['string', ['', $1]]
+
+bare_word    = </[^\s\[\]\(\)\{\}:'"`]+/>
+
+string_tag   = 'd'
+             |                                         -> ''
+
+str          = tsquote tsqchar* tsquote                -> cat($2)
+             | tdquote tdqchar* tdquote                -> cat($2)
+             | tbquote tbqchar* tbquote                -> cat($2)
+             | squote sqchar* squote                   -> cat($2)
              | dquote dqchar* dquote                   -> cat($2)
              | bquote bqchar* bquote                   -> cat($2)
-             | tsquote tsqchar* tsquote                -> _dedent(cat($2))
-             | tdquote tdqchar* tdquote                -> _dedent(cat($2))
-             | tbquote tbqchar* tbquote                -> _dedent(cat($2))
-             | 'r' squote (~(squote|eol) any)* squote  -> cat($3)
-             | 'r' dquote (~(dquote|eol) any)* dquote  -> cat($3)
-             | 'r' bquote (~(bquote|eol) any)* bquote  -> cat($3)
-             | 'r' tsquote ^tsquote* tsquote           -> _dedent(cat($3))
-             | 'r' tdquote ^tdquote* tsquote           -> _dedent(cat($3))
-             | 'r' tbquote ^tbquote* tbquote           -> _dedent(cat($3))
-
-squote       = "'"
-
-sqchar       = bslash escape
-             | ^(bslash | squote | eol)
-
-dquote       = '"'
-
-dqchar       = bslash escape
-             | ^(bslash | dquote | eol)
-
-bquote       = '`'
-
-bqchar       = bslash escape
-             | ^(bslash | bquote | eol)
+             | "L'" '-'*:l "'"
+               (<bslash squote> | ~("'" ={l} "'"))*:cs
+               "'" ={l} "'"                            -> cat(cs)
 
 tsquote      = "'''"
 
-tsqchar      = bslash escape
-             | ^(bslash tsquote)
+tsqchar      = <bslash squote>
+             | ^tsquote
+
+tbquote      = "```"
 
 tdquote      = '"""'
 
-tdchar       = bslash escape
-             | ^(bslash | tdquote)
+tdqchar      = bslash dquote
+             | ^tdquote
+
+tbqchar      = bslash bquote
+             | ^tsquote
+
+squote       = "'"
+
+dquote       = '"'
+
+bquote       = '`'
+
+sqchar       = bslash escape
+             | ^squote
+
+dqchar       = bslash dquote
+             | ^dquote
+
+bqchar       = bslash escape
+             | ^bquote
+
+raw_tag      = 'r' string_tag                          -> cat($1, $2)
+             | string_tag 'r'                          -> cat($2, $1)
+
+raw_str      = tsquote ^tsquote tsquote                -> cat($2)
+             | tdquote ^tdquote tdquote                -> cat($2)
+             | tbquote ^tbquote tbquote                -> cat($2)
+             | squote ^squote squote                   -> cat($2)
+             | dquote ^dquote dquote                   -> cat($2)
+             | bquote ^bquote bquote                   -> cat($2)
 
 bslash       = '\\'
+
+// Note: the parser actually stores the raw strings in the AST,
+// and so the `escape` production isn't actually used, but this
+// is here for reference. Theoretically we could extend the parser to
+// call parse(`escape`) to decode the string instead of doing it by hand.
 
 escape       = 'b'                                      -> '\b'
              | 'f'                                      -> '\f'
@@ -91,52 +123,27 @@ escape       = 'b'                                      -> '\b'
              | 'r'                                      -> '\r'
              | 't'                                      -> '\t'
              | 'v'                                      -> '\v'
-             | '/'                                      -> '/'
              | squote
              | dquote
              | bquote
              | bslash
              | oct_escape
              | hex_escape
-             | unicode_escape
-             | ~eof any
+             | uni_escape
 
-oct_escape   = ('0'..'7'){1,3}                          -> otoa(cat($1))
+oct_escape   = ('0'..'7'){1,3}                          -> otou(cat($1))
 
-hex_escape   = 'x' hex{2}                               -> xtoa(cat($2))
-             | 'x' '{' hex{2} '}'                       -> xtoa(cat($3))
-uni_escape   = 'u' hex{4}                               -> xtou(cat($2)
-             | 'u' '{' hex+ '}'                         -> xtou(cat($3))
-             = 'U' hex{8}                               -> xtou(cat($2))
+hex_escape   = 'x' hex{2}                               -> xtou(cat($2))
 
-array        = '[' value? (','? value)* ']'             -> acat([$2], $3)
-              
-object       = '{' member? (','? member)* '}'           -> acat([$2], $3)
+uni_escape   = 'u' hex{4}                               -> xtou(cat($2))
+             | 'U' hex{8}                               -> xtou(cat($2))
+
+array        = '[' value? (','? value)* ']'             -> concat($2, $3)
+
+object       = '{' member? (','? member)* '}'           -> concat($2, $3)
 
 member       = key ':' value                            -> [$1, $3]
 
-key          = id
-             | string
-
-id           = id_start id_continue*                    -> scat($1, $2)
-
-id_start     = 'a'..'z' 
-             | 'A'..'Z'
-             | '$'
-             | '_'
-             | \p{Ll}
-             | \p{Lm}
-             | \p{Lo}
-             | \p{Lt}
-             | \p{Lu}
-             | \p{Nl}
-             | bslash uni_escape
-
-id_continue  = id_start
-             | digit
-             | \p{Mn}
-             | \p{Mc}
-             | \p{Nd}
-             | \p{Pc}
-             | '\u200c'  # zero width non-joiner
-             | '\u200d'  # zero width joiner
+key          = string
+             | string_list
+             | ~('true' | 'false' | 'null' | number) bare_word
