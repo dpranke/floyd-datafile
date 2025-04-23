@@ -1,11 +1,11 @@
 %whitespace  = [ \n\r\t]+
 
-%externs     = _consume_trailing
-
 %comment     = ('#'|'//') ^eol*
              | '/*' ^.'*/'
 
-%tokens      = number | string | bare_word | eol
+%tokens      = number | str | bare_word | eol
+
+%externs     = _consume_trailing
 
 grammar      = value _filler (?{_consume_trailing} end)   -> $1
              | member+ _filler (?{_consume_trailing} end) -> ['object', '', $1]
@@ -54,82 +54,42 @@ string_list  = string_tag '(' string (','? string)* ')'
 string_tag   = ('d' | 'r' | 'dr' | 'rd' | tag) ~(_whitespace | _comment)
                  -> $1
 
-tag          = bare_word                               -> $1[2]
+tag          = bare_word
              |                                         -> ''
 
-// Anything that isn't whitespace or one of the punctuation symbols
-// used elsewhere in the grammar.
+// A bare word is a sequence of anything that isn't whitespace or one of the
+// punctuation symbols used elsewhere in the grammar that isn't a reserved
+// word or a number.
 bare_word    = ~('true' | 'false' | 'null' | number)
-               </[^\s\[\]\(\)\{\}:,\/#'"`]+/>
+               <(^(punct | _whitespace))+>
 
-str          = tsquote tsqchar* tsquote                -> cat($2)
-             | tdquote tdqchar* tdquote                -> cat($2)
-             | tbquote tbqchar* tbquote                -> cat($2)
-             | squote sqchar* squote                   -> cat($2)
-             | dquote dqchar* dquote                   -> cat($2)
-             | bquote bqchar* bquote                   -> cat($2)
-             | "L'" '-'+:l "'"
-               (<bslash squote> | ~("'" ={l} "'"))*:cs
-               "'" ={l} "'"                            -> cat(cs)
+str          = tsq (~tsq bchar)* tsq                -> cat($2)
+             | tdq (~tdq bchar)* tdq                -> cat($2)
+             | tbq (~tbq bchar)* tbq                -> cat($2)
+             | sq (~sq bchar)* sq                   -> cat($2)
+             | dq (~dq bchar)* dq                   -> cat($2)
+             | bq (~bq bchar)* bq                   -> cat($2)
+             | 'L' <sq '='+ sq>:lq (~(={lq}) bchar)*:cs ={lq} -> cat(cs)
 
-tsquote      = "'''"
+punct        = lstart | '[' | ']' | [(){}:,/#'"`]
 
-tsqchar      = <bslash squote>
-             | ^tsquote
+lstart       = <'L' sq '='+ sq>
 
-tbquote      = "```"
+sq           = "'"
 
-tdquote      = '"""'
+dq           = '"'
 
-tdqchar      = <bslash dquote>
-             | ^tdquote
+bq           = "`"
 
-tbqchar      = <bslash bquote>
-             | ^tsquote
+tsq          = "'''"
 
-squote       = "'"
+tbq          = "```"
 
-dquote       = '"'
+tdq          = '"""'
 
-bquote       = '`'
-
-sqchar       = <bslash squote>
-             | ^squote
-
-dqchar       = <bslash dquote>
-             | ^dquote
-
-bqchar       = <bslash bquote>
-             | ^bquote
-
+bchar        = <bslash (sq | dq | bq)> | any
 
 bslash       = '\\'
-
-// Note: the parser actually stores the raw strings in the AST,
-// and so the `escape` production isn't actually used, but this
-// is here for reference. Theoretically we could extend the parser to
-// call parse(`escape`) to decode the string instead of doing it by hand.
-
-escape       = 'b'                                      -> '\b'
-             | 'f'                                      -> '\f'
-             | 'n'                                      -> '\n'
-             | 'r'                                      -> '\r'
-             | 't'                                      -> '\t'
-             | 'v'                                      -> '\v'
-             | squote
-             | dquote
-             | bquote
-             | bslash
-             | oct_escape
-             | hex_escape
-             | uni_escape
-
-oct_escape   = ('0'..'7'){1,3}                          -> otou(cat($1))
-
-hex_escape   = 'x' hex{2}                               -> xtou(cat($2))
-
-uni_escape   = 'u' hex{4}                               -> xtou(cat($2))
-             | 'U' hex{8}                               -> xtou(cat($2))
 
 array        = array_tag '[' value? (','? value)* ']'
                  -> ['array', $1, concat($3, $4)]

@@ -65,9 +65,9 @@ class LoadTest(unittest.TestCase):
         self.check('`foo`', 'foo')
         self.check('"""foo"""', 'foo')
         self.check("'''foo'''", 'foo')
-        # self.check('```foo```', 'foo')
-        # self.check("L'='foo'='", 'foo')
-        # self.check("L'=='foo'=='", 'foo')
+        self.check('```foo```', 'foo')
+        self.check("L'='foo'='", 'foo')
+        self.check("L'=='foo'=='", 'foo')
 
     def test_bare_word(self):
         self.check('foo', 'foo')
