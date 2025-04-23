@@ -339,7 +339,12 @@ class Runner:
 
     def run_tests(self):
         cmd = self.run_cmd + [
-            '-m', 'unittest', 'discover', '-p', '*_test.py', 'tests'
+            '-m',
+            'unittest',
+            'discover',
+            '-p',
+            '*_test.py',
+            'tests',
         ]
         if self.args.quiet:
             cmd.append('-q')

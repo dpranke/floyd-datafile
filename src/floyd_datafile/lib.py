@@ -681,7 +681,7 @@ class Encoder:
         # here, but for backwards-compatibility with potential old callers,
         # we only check for the two attributes we need in each case.
         if self.indent:
-            max_len = 80 - level*self.indent
+            max_len = 80 - level * self.indent
         else:
             max_len = 80
         if hasattr(obj, 'keys') and hasattr(obj, '__getitem__'):

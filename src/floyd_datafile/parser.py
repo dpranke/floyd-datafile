@@ -99,22 +99,15 @@ class _Parser:
         v__1 = self._val
         self._memoize('r__filler', self._r__filler)
         self._s_grammar_2()
-        if self._failed:
-            return
         self._succeed(v__1)
 
     def _s_grammar_2(self):
-        v = self._externs['_consume_trailing']
-        if v is True:
-            self._succeed(v)
-        elif v is False:
-            self._fail()
-        else:
-            raise _ParsingRuntimeError('Bad predicate value')
+        p = self._pos
+        self._memoize('r_trailing', self._r_trailing)
         if self._failed:
-            return
-        self._memoize('r__filler', self._r__filler)
-        self._memoize('r_end', self._r_end)
+            self._succeed([], p)
+        else:
+            self._succeed([self._val])
 
     def _s_grammar_3(self):
         self._s_grammar_4()
@@ -123,8 +116,6 @@ class _Parser:
         v__1 = self._val
         self._memoize('r__filler', self._r__filler)
         self._s_grammar_5()
-        if self._failed:
-            return
         self._succeed(['object', '', v__1])
 
     def _s_grammar_4(self):
@@ -143,6 +134,14 @@ class _Parser:
         self._succeed(vs)
 
     def _s_grammar_5(self):
+        p = self._pos
+        self._memoize('r_trailing', self._r_trailing)
+        if self._failed:
+            self._succeed([], p)
+        else:
+            self._succeed([self._val])
+
+    def _r_trailing(self):
         v = self._externs['_consume_trailing']
         if v is True:
             self._succeed(v)
@@ -457,10 +456,24 @@ class _Parser:
         self._ch('_')
 
     def _r_digit(self):
-        self._range('0', '9')
+        p = '[0-9]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
+            return
+        self._fail()
 
     def _r_nonzerodigit(self):
-        self._range('1', '9')
+        p = '[1-9]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
+            return
+        self._fail()
 
     def _r_frac(self):
         self._ch('.')
@@ -500,27 +513,34 @@ class _Parser:
         self._ch('-')
 
     def _r_bin(self):
-        p = self._pos
-        self._ch('0')
-        if not self._failed:
+        p = '[01]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
             return
-        self._rewind(p)
-        self._ch('1')
+        self._fail()
 
     def _r_oct(self):
-        self._range('0', '7')
+        p = '[0-7]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
+            return
+        self._fail()
 
     def _r_hex(self):
-        p = self._pos
-        self._range('0', '9')
-        if not self._failed:
+        p = '[0-9a-fA-F]'
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
             return
-        self._rewind(p)
-        self._range('a', 'f')
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._range('A', 'F')
+        self._fail()
 
     def _r_string(self):
         p = self._pos
@@ -769,25 +789,19 @@ class _Parser:
             return
         self._rewind(p)
         self._scopes.append({})
-        self._s_str_5()
+        self._s_str_6()
         self._scopes.pop()
         if not self._failed:
             return
         self._rewind(p)
         self._scopes.append({})
-        self._s_str_9()
+        self._s_str_11()
         self._scopes.pop()
         if not self._failed:
             return
         self._rewind(p)
         self._scopes.append({})
-        self._s_str_13()
-        self._scopes.pop()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._scopes.append({})
-        self._s_str_17()
+        self._s_str_16()
         self._scopes.pop()
         if not self._failed:
             return
@@ -799,7 +813,13 @@ class _Parser:
             return
         self._rewind(p)
         self._scopes.append({})
-        self._s_str_25()
+        self._s_str_26()
+        self._scopes.pop()
+        if not self._failed:
+            return
+        self._rewind(p)
+        self._scopes.append({})
+        self._s_str_31()
         self._scopes.pop()
 
     def _s_str_1(self):
@@ -811,26 +831,32 @@ class _Parser:
         self._memoize('r_tsq', self._r_tsq)
         if self._failed:
             return
-        self._succeed(self._fn_cat(self._lookup('$2')))
+        self._succeed(self._lookup('$2'))
 
     def _s_str_2(self):
+        start = self._pos
+        self._s_str_3()
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_str_3(self):
         vs = []
         while True:
             p = self._pos
-            self._s_str_3()
+            self._s_str_4()
             if self._failed or self._pos == p:
                 self._rewind(p)
                 break
             vs.append(self._val)
         self._succeed(vs)
 
-    def _s_str_3(self):
-        self._s_str_4()
+    def _s_str_4(self):
+        self._s_str_5()
         if self._failed:
             return
         self._memoize('r_bchar', self._r_bchar)
 
-    def _s_str_4(self):
+    def _s_str_5(self):
         p = self._pos
         errpos = self._errpos
         self._memoize('r_tsq', self._r_tsq)
@@ -841,35 +867,41 @@ class _Parser:
             self._errpos = errpos
             self._fail()
 
-    def _s_str_5(self):
+    def _s_str_6(self):
         self._memoize('r_tdq', self._r_tdq)
         if self._failed:
             return
-        self._s_str_6()
+        self._s_str_7()
         self._scopes[-1]['$2'] = self._val
         self._memoize('r_tdq', self._r_tdq)
         if self._failed:
             return
-        self._succeed(self._fn_cat(self._lookup('$2')))
-
-    def _s_str_6(self):
-        vs = []
-        while True:
-            p = self._pos
-            self._s_str_7()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
+        self._succeed(self._lookup('$2'))
 
     def _s_str_7(self):
+        start = self._pos
         self._s_str_8()
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_str_8(self):
+        vs = []
+        while True:
+            p = self._pos
+            self._s_str_9()
+            if self._failed or self._pos == p:
+                self._rewind(p)
+                break
+            vs.append(self._val)
+        self._succeed(vs)
+
+    def _s_str_9(self):
+        self._s_str_10()
         if self._failed:
             return
         self._memoize('r_bchar', self._r_bchar)
 
-    def _s_str_8(self):
+    def _s_str_10(self):
         p = self._pos
         errpos = self._errpos
         self._memoize('r_tdq', self._r_tdq)
@@ -880,35 +912,41 @@ class _Parser:
             self._errpos = errpos
             self._fail()
 
-    def _s_str_9(self):
+    def _s_str_11(self):
         self._memoize('r_tbq', self._r_tbq)
         if self._failed:
             return
-        self._s_str_10()
+        self._s_str_12()
         self._scopes[-1]['$2'] = self._val
         self._memoize('r_tbq', self._r_tbq)
         if self._failed:
             return
-        self._succeed(self._fn_cat(self._lookup('$2')))
-
-    def _s_str_10(self):
-        vs = []
-        while True:
-            p = self._pos
-            self._s_str_11()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_str_11(self):
-        self._s_str_12()
-        if self._failed:
-            return
-        self._memoize('r_bchar', self._r_bchar)
+        self._succeed(self._lookup('$2'))
 
     def _s_str_12(self):
+        start = self._pos
+        self._s_str_13()
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_str_13(self):
+        vs = []
+        while True:
+            p = self._pos
+            self._s_str_14()
+            if self._failed or self._pos == p:
+                self._rewind(p)
+                break
+            vs.append(self._val)
+        self._succeed(vs)
+
+    def _s_str_14(self):
+        self._s_str_15()
+        if self._failed:
+            return
+        self._memoize('r_bchar', self._r_bchar)
+
+    def _s_str_15(self):
         p = self._pos
         errpos = self._errpos
         self._memoize('r_tbq', self._r_tbq)
@@ -919,55 +957,22 @@ class _Parser:
             self._errpos = errpos
             self._fail()
 
-    def _s_str_13(self):
+    def _s_str_16(self):
         self._memoize('r_sq', self._r_sq)
         if self._failed:
             return
-        self._s_str_14()
+        self._s_str_17()
         self._scopes[-1]['$2'] = self._val
         self._memoize('r_sq', self._r_sq)
         if self._failed:
             return
-        self._succeed(self._fn_cat(self._lookup('$2')))
-
-    def _s_str_14(self):
-        vs = []
-        while True:
-            p = self._pos
-            self._s_str_15()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_str_15(self):
-        self._s_str_16()
-        if self._failed:
-            return
-        self._memoize('r_bchar', self._r_bchar)
-
-    def _s_str_16(self):
-        p = self._pos
-        errpos = self._errpos
-        self._memoize('r_sq', self._r_sq)
-        if self._failed:
-            self._succeed(None, p)
-        else:
-            self._rewind(p)
-            self._errpos = errpos
-            self._fail()
+        self._succeed(self._lookup('$2'))
 
     def _s_str_17(self):
-        self._memoize('r_dq', self._r_dq)
-        if self._failed:
-            return
+        start = self._pos
         self._s_str_18()
-        self._scopes[-1]['$2'] = self._val
-        self._memoize('r_dq', self._r_dq)
-        if self._failed:
-            return
-        self._succeed(self._fn_cat(self._lookup('$2')))
+        end = self._pos
+        self._val = self._text[start:end]
 
     def _s_str_18(self):
         vs = []
@@ -989,7 +994,7 @@ class _Parser:
     def _s_str_20(self):
         p = self._pos
         errpos = self._errpos
-        self._memoize('r_dq', self._r_dq)
+        self._memoize('r_sq', self._r_sq)
         if self._failed:
             self._succeed(None, p)
         else:
@@ -998,37 +1003,43 @@ class _Parser:
             self._fail()
 
     def _s_str_21(self):
-        self._memoize('r_bq', self._r_bq)
+        self._memoize('r_dq', self._r_dq)
         if self._failed:
             return
         self._s_str_22()
         self._scopes[-1]['$2'] = self._val
-        self._memoize('r_bq', self._r_bq)
+        self._memoize('r_dq', self._r_dq)
         if self._failed:
             return
-        self._succeed(self._fn_cat(self._lookup('$2')))
+        self._succeed(self._lookup('$2'))
 
     def _s_str_22(self):
+        start = self._pos
+        self._s_str_23()
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_str_23(self):
         vs = []
         while True:
             p = self._pos
-            self._s_str_23()
+            self._s_str_24()
             if self._failed or self._pos == p:
                 self._rewind(p)
                 break
             vs.append(self._val)
         self._succeed(vs)
 
-    def _s_str_23(self):
-        self._s_str_24()
+    def _s_str_24(self):
+        self._s_str_25()
         if self._failed:
             return
         self._memoize('r_bchar', self._r_bchar)
 
-    def _s_str_24(self):
+    def _s_str_25(self):
         p = self._pos
         errpos = self._errpos
-        self._memoize('r_bq', self._r_bq)
+        self._memoize('r_dq', self._r_dq)
         if self._failed:
             self._succeed(None, p)
         else:
@@ -1036,47 +1047,28 @@ class _Parser:
             self._errpos = errpos
             self._fail()
 
-    def _s_str_25(self):
-        self._ch('L')
-        if self._failed:
-            return
-        self._s_str_26()
-        if self._failed:
-            return
-        self._scopes[-1]['lq'] = self._val
-        self._s_str_29()
-        self._scopes[-1]['cs'] = self._val
-        self._str(self._lookup('lq'))
-        if self._failed:
-            return
-        self._succeed(self._fn_cat(self._lookup('cs')))
-
     def _s_str_26(self):
-        start = self._pos
-        self._s_str_27()
+        self._memoize('r_bq', self._r_bq)
         if self._failed:
             return
+        self._s_str_27()
+        self._scopes[-1]['$2'] = self._val
+        self._memoize('r_bq', self._r_bq)
+        if self._failed:
+            return
+        self._succeed(self._lookup('$2'))
+
+    def _s_str_27(self):
+        start = self._pos
+        self._s_str_28()
         end = self._pos
         self._val = self._text[start:end]
 
-    def _s_str_27(self):
-        self._memoize('r_sq', self._r_sq)
-        if self._failed:
-            return
-        self._s_str_28()
-        if self._failed:
-            return
-        self._memoize('r_sq', self._r_sq)
-
     def _s_str_28(self):
         vs = []
-        self._ch('=')
-        if self._failed:
-            return
-        vs.append(self._val)
         while True:
             p = self._pos
-            self._ch('=')
+            self._s_str_29()
             if self._failed or self._pos == p:
                 self._rewind(p)
                 break
@@ -1084,26 +1076,15 @@ class _Parser:
         self._succeed(vs)
 
     def _s_str_29(self):
-        vs = []
-        while True:
-            p = self._pos
-            self._s_str_30()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_str_30(self):
-        self._s_str_31()
+        self._s_str_30()
         if self._failed:
             return
         self._memoize('r_bchar', self._r_bchar)
 
-    def _s_str_31(self):
+    def _s_str_30(self):
         p = self._pos
         errpos = self._errpos
-        self._s_str_32()
+        self._memoize('r_bq', self._r_bq)
         if self._failed:
             self._succeed(None, p)
         else:
@@ -1111,56 +1092,39 @@ class _Parser:
             self._errpos = errpos
             self._fail()
 
-    def _s_str_32(self):
+    def _s_str_31(self):
+        self._ch('L')
+        if self._failed:
+            return
+        self._s_str_32()
+        if self._failed:
+            return
+        self._scopes[-1]['lq'] = self._val
+        self._s_str_35()
+        self._scopes[-1]['$3'] = self._val
         self._str(self._lookup('lq'))
+        if self._failed:
+            return
+        self._succeed(self._lookup('$3'))
 
-    def _r_punct(self):
-        p = self._pos
-        self._memoize('r_lstart', self._r_lstart)
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._ch('[')
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._ch(']')
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_punct_1()
-
-    def _s_punct_1(self):
-        p = "[(){}:,/#'\"`]"
-        if p not in self._regexps:
-            self._regexps[p] = re.compile(p)
-        m = self._regexps[p].match(self._text, self._pos)
-        if m:
-            self._succeed(m.group(0), m.end())
-            return
-        self._fail()
-
-    def _r_lstart(self):
+    def _s_str_32(self):
         start = self._pos
-        self._s_lstart_1()
+        self._s_str_33()
         if self._failed:
             return
         end = self._pos
         self._val = self._text[start:end]
 
-    def _s_lstart_1(self):
-        self._ch('L')
-        if self._failed:
-            return
+    def _s_str_33(self):
         self._memoize('r_sq', self._r_sq)
         if self._failed:
             return
-        self._s_lstart_2()
+        self._s_str_34()
         if self._failed:
             return
         self._memoize('r_sq', self._r_sq)
 
-    def _s_lstart_2(self):
+    def _s_str_34(self):
         vs = []
         self._ch('=')
         if self._failed:
@@ -1174,6 +1138,53 @@ class _Parser:
                 break
             vs.append(self._val)
         self._succeed(vs)
+
+    def _s_str_35(self):
+        start = self._pos
+        self._s_str_36()
+        end = self._pos
+        self._val = self._text[start:end]
+
+    def _s_str_36(self):
+        vs = []
+        while True:
+            p = self._pos
+            self._s_str_37()
+            if self._failed or self._pos == p:
+                self._rewind(p)
+                break
+            vs.append(self._val)
+        self._succeed(vs)
+
+    def _s_str_37(self):
+        self._s_str_38()
+        if self._failed:
+            return
+        self._memoize('r_bchar', self._r_bchar)
+
+    def _s_str_38(self):
+        p = self._pos
+        errpos = self._errpos
+        self._s_str_39()
+        if self._failed:
+            self._succeed(None, p)
+        else:
+            self._rewind(p)
+            self._errpos = errpos
+            self._fail()
+
+    def _s_str_39(self):
+        self._str(self._lookup('lq'))
+
+    def _r_punct(self):
+        p = "(L'=+')|[/#'\"`\\[\\](){}:,]"
+        if p not in self._regexps:
+            self._regexps[p] = re.compile(p)
+        m = self._regexps[p].match(self._text, self._pos)
+        if m:
+            self._succeed(m.group(0), m.end())
+            return
+        self._fail()
 
     def _r_sq(self):
         self._ch("'")
@@ -1393,7 +1404,7 @@ class _Parser:
         self._memoize('r__comment', self._r__comment)
 
     def _r_member(self):
-        self._memoize('r_key', self._r_key)
+        self._memoize('r_string', self._r_string)
         if self._failed:
             return
         v__1 = self._val
@@ -1406,55 +1417,6 @@ class _Parser:
             return
         v__3 = self._val
         self._succeed([v__1, v__3])
-
-    def _r_key(self):
-        self._s_key_1()
-        if self._failed:
-            return
-        self._memoize('r_string', self._r_string)
-
-    def _s_key_1(self):
-        p = self._pos
-        errpos = self._errpos
-        self._s_key_2()
-        if self._failed:
-            self._succeed(None, p)
-        else:
-            self._rewind(p)
-            self._errpos = errpos
-            self._fail()
-
-    def _s_key_2(self):
-        p = self._pos
-        self._s_key_3()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_key_4()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_key_5()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_key_6()
-
-    def _s_key_3(self):
-        self._memoize('r__filler', self._r__filler)
-        self._str('true')
-
-    def _s_key_4(self):
-        self._memoize('r__filler', self._r__filler)
-        self._str('false')
-
-    def _s_key_5(self):
-        self._memoize('r__filler', self._r__filler)
-        self._str('null')
-
-    def _s_key_6(self):
-        self._memoize('r__filler', self._r__filler)
-        self._memoize('r_number', self._r_number)
 
     def _r__whitespace(self):
         vs = []
@@ -1632,13 +1594,6 @@ class _Parser:
         fn()
         self._cache[p][rule_name] = (self._val, self._failed, self._pos)
 
-    def _range(self, i, j):
-        p = self._pos
-        if p != self._end and ord(i) <= ord(self._text[p]) <= ord(j):
-            self._succeed(self._text[p], self._pos + 1)
-        else:
-            self._fail()
-
     def _rewind(self, newpos):
         self._succeed(None, newpos)
 
@@ -1654,9 +1609,6 @@ class _Parser:
         self._failed = False
         if newpos is not None:
             self._pos = newpos
-
-    def _fn_cat(self, strs):
-        return ''.join(strs)
 
     def _fn_concat(self, xs, ys):
         return xs + ys
