@@ -3,7 +3,7 @@
 %comment     = ('#'|'//') ^eol*
              | '/*' ^.'*/'
 
-%tokens      = number | str | bare_word | eol
+%tokens      = number | str | raw_str | bare_word | eol
 
 %externs     = _consume_trailing
 
@@ -46,22 +46,33 @@ oct          = [0-7]
 
 hex          = [0-9a-fA-F]
 
-string       = string_tag str                         -> ['string', $1, $2]
+string       = raw_str_tag raw_str                    -> ['string', $1, $2]
+             | string_tag str                         -> ['string', $1, $2]
              | string_list
              | bare_word                              -> ['string', '', $1]
 
 string_list  = string_tag
                '(' string (','? string)* ')'          -> ['string_list', $1,
                                                           scons($3, $4)]
+raw_str_tag  = ('r' | 'rd' | 'dr')
+                 ~(_whitespace | _comment)            -> $1
 
-string_tag   = ('d' | 'r' | 'dr' | 'rd' | tag)
-               ~(_whitespace | _comment)              -> $1
+string_tag   = ('d' | tag) ~(_whitespace | _comment)  -> $1
 
 tag          = bare_word
              |                                        -> ''
 
 bare_word    = ~('true' | 'false' | 'null' | number)
                <(^(punct | _whitespace))+>
+
+raw_str      = tsq <(^tsq)*> tsq                      -> $2
+             | tdq <(^tdq)*> tdq                      -> $2
+             | tbq <(^tbq)*> tbq                      -> $2
+             | sq <(^sq)*> sq                         -> $2
+             | dq <(^dq)*> dq                         -> $2
+             | bq <(^bq)*> bq                         -> $2
+             | 'L' <sq '='+ sq>:lq
+               <(^(={lq}))*> ={lq}                    -> $3
 
 str          = tsq <(~tsq bchar)*> tsq                -> $2
              | tdq <(~tdq bchar)*> tdq                -> $2
@@ -72,7 +83,7 @@ str          = tsq <(~tsq bchar)*> tsq                -> $2
              | 'L' <sq '='+ sq>:lq
                <(~(={lq}) bchar)*> ={lq}              -> $3
 
-punct        = /(L'=+')|[\/#'"`\[\](){}:,]/
+punct        = /(L'=+')|[\/#'"`\[\](){}:=,]/
 
 sq           = "'"
 
@@ -86,9 +97,20 @@ tbq          = "```"
 
 tdq          = '"""'
 
-bchar        = <bslash (sq | dq | bq)> | any
+bchar        = bslash escape
+             | any
 
 bslash       = '\\'
+
+escape       = bslash
+             | [abfnrtv'"`]
+             | oct{1,3}
+             | 'x' hex{2}
+             | 'u' hex{4}
+             | 'U' hex{8}
+             | 'N{' /[A-Z][A-Z0-9]*(( [A-Z][A-Z0-9]*|(-[A-Z0-9]*)))*/ '}'
+
+nchar        = [0-9A-Z -]
 
 array        = array_tag '[' value? (','? value)* ']' -> ['array', $1,
                                                           concat($3, $4)]
@@ -101,4 +123,4 @@ object       = object_tag
 
 object_tag   = tag ~(_whitespace | _comment)          -> $1
 
-member       = string ':' value                       -> [$1, $3]
+member       = string (':'|'=') value                 -> [$1, $3]
