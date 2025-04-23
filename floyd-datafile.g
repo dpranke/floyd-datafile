@@ -8,19 +8,17 @@
 %tokens      = number | string | bare_word | eol
 
 grammar      = value _filler (?{_consume_trailing} end)   -> $1
-             | member+ _filler (?{_consume_trailing} end) -> $1
+             | member+ _filler (?{_consume_trailing} end) -> ['object', '', $1]
 
 eol          = '\r\n' | '\r' | '\n'
 
-value        = 'true'                               -> ['true', null]
-             | 'false'                              -> ['false', null]
-             | 'null'                               -> ['null', null]
-             | <number>                             -> ['number', $1]
-             | string                               -> $1
-             | string_list                          -> ['string_list', $1]
-             | array                                -> ['array', $1]
-             | object                               -> ['object', $1]
-             | bare_word                            -> ['string', ['', $1]]
+value        = 'true'                               -> ['true', '', null]
+             | 'false'                              -> ['false', '', null]
+             | 'null'                               -> ['null', '', null]
+             | <number>                             -> ['number', '', $1]
+             | array
+             | object
+             | string
 
 number       = ('-'|'+')? int frac? exp?
              | '0b' bin ((bin | '_')* bin)?
@@ -47,17 +45,23 @@ oct          = '0'..'7'
 
 hex          = '0' .. '9' | 'a' .. 'f' | 'A' .. 'F'
 
-string_list  = '(' string (','? string)* ')'           -> cons($2, $3)
+string       = string_tag str                       -> ['string', $1, $2]
+             | string_list
+             | bare_word                            -> ['string', '', $1]
 
-string       = string_tag str                          -> ['string', [$1, $2]]
-             | raw_tag raw_str                         -> ['string', [$1, $2]]
+string_list  = string_tag '(' string (','? string)* ')'
+                 -> ['string_list', $1, scons($3, $4)]
+
+string_tag   = ('d' | 'r' | 'dr' | 'rd' | tag) ~(_whitespace | _comment)
+                 -> $1
+
+tag          = bare_word                               -> $1[2]
+             |                                         -> ''
 
 // Anything that isn't whitespace or one of the punctuation symbols
 // used elsewhere in the grammar.
-bare_word    = </[^\s\[\]\(\)\{\}:,\/#'"`]+/>
-
-string_tag   = 'd'
-             |                                         -> ''
+bare_word    = ~('true' | 'false' | 'null' | number)
+               </[^\s\[\]\(\)\{\}:,\/#'"`]+/>
 
 str          = tsquote tsqchar* tsquote                -> cat($2)
              | tdquote tdqchar* tdquote                -> cat($2)
@@ -99,15 +103,6 @@ dqchar       = <bslash dquote>
 bqchar       = <bslash bquote>
              | ^bquote
 
-raw_tag      = 'r' string_tag                          -> cat($1, $2)
-             | string_tag 'r'                          -> cat($2, $1)
-
-raw_str      = tsquote ^tsquote tsquote                -> cat($2)
-             | tdquote ^tdquote tdquote                -> cat($2)
-             | tbquote ^tbquote tbquote                -> cat($2)
-             | squote ^squote squote                   -> cat($2)
-             | dquote ^dquote dquote                   -> cat($2)
-             | bquote ^bquote bquote                   -> cat($2)
 
 bslash       = '\\'
 
@@ -137,12 +132,16 @@ hex_escape   = 'x' hex{2}                               -> xtou(cat($2))
 uni_escape   = 'u' hex{4}                               -> xtou(cat($2))
              | 'U' hex{8}                               -> xtou(cat($2))
 
-array        = '[' value? (','? value)* ']'             -> concat($2, $3)
+array        = array_tag '[' value? (','? value)* ']'
+                 -> ['array', $1, concat($3, $4)]
 
-object       = '{' member? (','? member)* '}'           -> concat($2, $3)
+array_tag    = tag ~(_whitespace | _comment)            -> $1
+
+object       = object_tag '{' member? (','? member)* '}'
+                -> ['object', $1, concat($3, $4)]
+
+object_tag   = tag ~(_whitespace | _comment)            -> $1
 
 member       = key ':' value                            -> [$1, $3]
 
-key          = string
-             | string_list
-             | ~('true' | 'false' | 'null' | number) bare_word
+key          = ~('true' | 'false' | 'null' | number) string

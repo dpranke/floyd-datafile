@@ -271,8 +271,8 @@ def _convert(
         keys = set()
         key_pairs = []
         for key_ast, val in pairs:
-            string_tags, s = key_ast[1]
-            key = _decode_str(s, 'r' in string_tags, 'd' in string_tags)
+            _, tag, s = key_ast
+            key = _decode_str(s, 'r' in tag, 'd' in tag)
             if key in keys:
                 raise ValueError(f'Duplicate key "{key}" found in object')
             keys.add(key)
@@ -360,7 +360,7 @@ def _walk_ast(
     parse_float,
     parse_int,
 ):
-    ty, v = el
+    ty, tag, v = el
     if ty == 'true':
         return True
     if ty == 'false':
@@ -374,7 +374,7 @@ def _walk_ast(
             return parse_float(v)
         return parse_int(v)
     if ty == 'string':
-        return _decode_str(v[1], 'r' in v[0], 'd' in v[0])
+        return _decode_str(v, 'r' in tag, 'd' in tag)
     if ty == 'object':
         pairs = []
         for key, val_expr in v:
