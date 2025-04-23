@@ -246,18 +246,14 @@ def parse(
     if err:
         return None, err, pos
 
-    try:
-        value = _convert(
-            ast,
-            object_hook=object_hook,
-            parse_float=parse_float,
-            parse_int=parse_int,
-            object_pairs_hook=object_pairs_hook,
-        )
-        return value, None, pos
-    except ValueError as e:
-        raise
-        # return None, str(e), pos
+    value = _convert(
+        ast,
+        object_hook=object_hook,
+        parse_float=parse_float,
+        parse_int=parse_int,
+        object_pairs_hook=object_pairs_hook,
+    )
+    return value, None, pos
 
 
 def _convert(

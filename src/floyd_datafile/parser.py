@@ -254,10 +254,6 @@ class _Parser:
             return
         self._rewind(p)
         self._s_number_16()
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._s_number_21()
 
     def _s_number_1(self):
         self._s_number_2()
@@ -412,46 +408,6 @@ class _Parser:
         self._succeed(vs)
 
     def _s_number_20(self):
-        p = self._pos
-        self._memoize('r_hex', self._r_hex)
-        if not self._failed:
-            return
-        self._rewind(p)
-        self._ch('_')
-
-    def _s_number_21(self):
-        self._str('0X')
-        if self._failed:
-            return
-        self._memoize('r_hex', self._r_hex)
-        if self._failed:
-            return
-        self._s_number_22()
-
-    def _s_number_22(self):
-        p = self._pos
-        self._s_number_23()
-        if self._failed:
-            self._succeed([], p)
-        else:
-            self._succeed([self._val])
-
-    def _s_number_23(self):
-        self._s_number_24()
-        self._memoize('r_hex', self._r_hex)
-
-    def _s_number_24(self):
-        vs = []
-        while True:
-            p = self._pos
-            self._s_number_25()
-            if self._failed or self._pos == p:
-                self._rewind(p)
-                break
-            vs.append(self._val)
-        self._succeed(vs)
-
-    def _s_number_25(self):
         p = self._pos
         self._memoize('r_hex', self._r_hex)
         if not self._failed:
@@ -934,6 +890,8 @@ class _Parser:
         if self._failed:
             return
         self._s_str_14()
+        if self._failed:
+            return
         self._scopes[-1]['l'] = self._val
         self._ch("'")
         if self._failed:
@@ -953,6 +911,10 @@ class _Parser:
 
     def _s_str_14(self):
         vs = []
+        self._ch('-')
+        if self._failed:
+            return
+        vs.append(self._val)
         while True:
             p = self._pos
             self._ch('-')

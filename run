@@ -338,7 +338,9 @@ class Runner:
             print(f'{self.parser_file} regenerated.')
 
     def run_tests(self):
-        cmd = self.run_cmd + ['-m', 'unittest', 'discover', '-p', '*_test.py']
+        cmd = self.run_cmd + [
+            '-m', 'unittest', 'discover', '-p', '*_test.py', 'tests'
+        ]
         if self.args.quiet:
             cmd.append('-q')
         if self.args.verbose:

@@ -24,7 +24,6 @@ number       = ('-'|'+')? int frac? exp?
              | '0b' bin ((bin | '_')* bin)?
              | '0o' oct ((oct | '_')* oct)?
              | '0x' hex ((hex | '_')* hex)?
-             | '0X' hex ((hex | '_')* hex)?
 
 int          = '0'
              | nonzerodigit digit_sep
@@ -69,7 +68,7 @@ str          = tsquote tsqchar* tsquote                -> cat($2)
              | squote sqchar* squote                   -> cat($2)
              | dquote dqchar* dquote                   -> cat($2)
              | bquote bqchar* bquote                   -> cat($2)
-             | "L'" '-'*:l "'"
+             | "L'" '-'+:l "'"
                (<bslash squote> | ~("'" ={l} "'"))*:cs
                "'" ={l} "'"                            -> cat(cs)
 
