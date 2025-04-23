@@ -57,9 +57,6 @@ string_tag   = ('d' | 'r' | 'dr' | 'rd' | tag) ~(_whitespace | _comment)
 tag          = bare_word
              |                                         -> ''
 
-// A bare word is a sequence of anything that isn't whitespace or one of the
-// punctuation symbols used elsewhere in the grammar that isn't a reserved
-// word or a number.
 bare_word    = ~('true' | 'false' | 'null' | number)
                <(^(punct | _whitespace))+>
 
