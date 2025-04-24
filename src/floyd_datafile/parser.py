@@ -55,7 +55,7 @@ class _Parser:
         self._text = text
         self._end = len(self._text)
         self._errpos = 0
-        self._expected_externs = {'_consume_trailing'}
+        self._expected_externs = {'_allow_trailing'}
         self._externs = {}
         self._failed = False
         self._path = path
@@ -142,7 +142,7 @@ class _Parser:
             self._succeed([self._val])
 
     def _r_trailing(self):
-        v = self._externs['_consume_trailing']
+        v = not self._externs['_allow_trailing']
         if v is True:
             self._succeed(v)
         elif v is False:

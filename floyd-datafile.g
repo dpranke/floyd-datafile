@@ -5,12 +5,17 @@
 
 %tokens      = number | str | raw_str | bare_word | eol
 
-%externs     = _consume_trailing
+// _allow_trailing is used to indicate whether parsing should stop
+// once a value (and any trailing filler) has been reached; by default
+// it is false, and it is an error for there to be any trailing non-filler
+// characters before the end of the string. If allow_trailing is set
+// to true, parsing stops without error ifa trailing character is reached.
+%externs     = _allow_trailing
 
 grammar      = value _filler trailing?                -> $1
              | member+ _filler trailing?              -> ['object', '', $1]
 
-trailing     = ?{_consume_trailing} end
+trailing     = ?{!_allow_trailing} end
 
 eol          = '\r\n' | '\r' | '\n'
 
@@ -45,6 +50,12 @@ bin          = [01]
 oct          = [0-7]
 
 hex          = [0-9a-fA-F]
+
+// Raw strings differ from strings in that escape sequences are unrecognized;
+// a raw string may contain anything between the starting and ending delimiter
+// except for the delimiter itself. Strings have to be parsed separately
+// from raw strings in order to not stop parsing when you hit the ending
+// delimiter if it is immediately preceded by a backslash.
 
 string       = raw_str_tag raw_str                    -> ['string', $1, $2]
              | string_tag str                         -> ['string', $1, $2]

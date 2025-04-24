@@ -48,7 +48,7 @@ def load(
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
-    consume_trailing: bool = True,
+    allow_trailing: bool = False,
     start: Optional[int] = None,
 ) -> Any:
     """Deserialize ``fp`` (a ``.read()``-supporting file-like object
@@ -56,12 +56,12 @@ def load(
 
     Supports almost the same arguments as ``json.load()`` except that:
         - the `cls` keyword is ignored.
-        - an extra `consume_trailing` parameter specifies whether to
-          consume any trailing characters after a valid object has been
-          parsed. By default, this value is True and the only legal
-          trailing characters are whitespace. If this value is set to False,
-          parsing will stop when a valid object has been parsed and any
-          trailing characters in the string will be ignored.
+        - an extra `allow_trailing` parameter specifies whether parsing
+          should stop after a value and any trailing filler has been
+          reached. By default, this is `False`, and it is illegal for
+          there to be trailing content after a value (i.e., you must
+          be at the end of the string). If this is set to `True`, then
+          parsing stops without error if trailing content is reached.
         - an extra `start` parameter specifies the zero-based offset into the
           file to start parsing at. If `start` is None, parsing will
           start at the current position in the file, and line number
@@ -71,7 +71,7 @@ def load(
           appropriate number of characters before beginning parsing;
           the file must be seekable for this to work correctly.
 
-    You can use `load(..., consume_trailing=False)` to repeatedly read
+    You can use `load(..., allow_trailing=True)` to repeatedly read
     values from a file. However, in the current implementation `load` does
     this by reading the entire file into memory before doing anything, so
     it is not very efficient.
@@ -98,7 +98,7 @@ def load(
         parse_float=parse_float,
         parse_int=parse_int,
         object_pairs_hook=object_pairs_hook,
-        consume_trailing=consume_trailing,
+        allow_trailing=allow_trailing,
         start=start,
     )
     if err:
@@ -117,7 +117,7 @@ def loads(
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
-    consume_trailing: bool = True,
+    allow_trailing: bool = False,
     start: Optional[int] = None,
 ):
     """Deserialize ``s`` (a string containing a Floyd datafile) to a Python
@@ -125,12 +125,15 @@ def loads(
 
     Supports the same arguments as ``json.load()`` except that:
         - the `cls` keyword is ignored.
-        - an extra `consume_trailing` parameter specifies whether to
-          consume any trailing characters after a valid object has been
-          parsed. By default, this value is True and the only legal
-          trailing characters are whitespace. If this value is set to False,
-          parsing will stop when a valid object has been parsed and any
-          trailing characters in the string will be ignored.
+        - an extra `allow_trailing` parameter specifies whether parsing
+          should stop after a value and any trailing filler has been
+          reached. By default, this is `False`, and it is illegal for
+          there to be trailing content after a value (i.e., you must
+          be at the end of the string). If this is set to `True`, then
+          parsing stops without error if trailing content is reached.
+          This is not as useful here as it is in `load()` and `parse()`,
+          as the stopping point is not returned to the caller. However,
+          it can be used just as a form of robustness if desired.
         - an extra `start` parameter specifies the zero-based offset into the
           string to start parsing at.
 
@@ -150,7 +153,7 @@ def loads(
         parse_float=parse_float,
         parse_int=parse_int,
         object_pairs_hook=object_pairs_hook,
-        consume_trailing=consume_trailing,
+        allow_trailing=allow_trailing,
         start=start,
     )
     if err:
@@ -169,26 +172,16 @@ def parse(
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
-    consume_trailing: bool = True,
+    allow_trailing: bool = False,
     start: Optional[int] = None,
 ):
     """Parse ```s``, returning positional information along with a value.
 
-    This works exactly like `loads()`, except that (a) it returns the
-    position in the string where the parsing stopped (either due to
-    hitting an error or parsing a valid value) and any error as a string,
-    (b) it takes an optional `consume_trailing` parameter that says whether
-    to keep parsing the string after a valid value has been parsed; if True
-    (the default), any trailing characters must be whitespace. If False,
-    parsing stops when a valid value has been reached, (c) it takes an
-    optional `start` parameter that specifies a zero-based offset to start
-    parsing from in the string, and (d) the return value is different, as
-    described below.
-
-    `parse()` is useful if you have a string that might contain multiple
-    values and you need to extract all of them; you can do so by repeatedly
-    calling `parse`, setting `start` to the value returned in `position`
-    from the previous call.
+    This works exactly like `loads()`, except that the return value is
+    different (see below). `parse()` is useful if you have a string that
+    might contain multiple values and you need to extract all of them;
+    you can do so by repeatedly calling `parse`, setting `start` to the
+    value returned in `position` from the previous call (see the example below).
 
     Returns:
       A tuple of (value, error_string, position). If the string
@@ -218,7 +211,7 @@ def parse(
         >>> start = 0
         >>> while True:
         ...     v, err, pos = floyd_datafile.parse(s, start=start,
-        ...                                        consume_trailing=False)
+        ...                                        allow_trailing=True)
         ...     if v:
         ...         values.append(v)
         ...         start = pos
@@ -241,7 +234,7 @@ def parse(
     if not s:
         raise ValueError('Empty strings are not legal Floyd datafiles')
     start = start or 0
-    externs = {'_consume_trailing': consume_trailing}
+    externs = {'_allow_trailing': allow_trailing}
     ast, err, pos = parser.parse(s, '<string>', externs)
     if err:
         return None, err, pos
