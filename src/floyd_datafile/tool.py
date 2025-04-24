@@ -33,7 +33,7 @@ import sys
 
 try:
     import floyd_datafile
-except ModuleNotFoundError as e:
+except ModuleNotFoundError as e:  # pragma: no cover
     src_dir = os.path.dirname(os.path.dirname(__file__))
     sys.path.insert(0, src_dir)
     import floyd_datafile

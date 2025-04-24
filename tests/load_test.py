@@ -100,5 +100,5 @@ class LoadTest(unittest.TestCase):
         self.check('@foo', '@foo')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     unittest.main()
