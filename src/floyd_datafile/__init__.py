@@ -24,9 +24,10 @@ possible. It provides the following functions:
 - `parse()` - Parse an object from a string, returning positional information.
 """
 
-from . import host
 from .lib import dump, dumps, load, loads, parse
 from .tool import main
+from . import support
+
 
 __version__ = '0.1.0.dev0'
 

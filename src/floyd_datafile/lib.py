@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import math
 import re
 
@@ -43,8 +44,7 @@ def load(
     encoding: Optional[str] = None,
     cls: Any = None,
     object_hook: Optional[Callable[[Mapping[str, Any]], Any]] = None,
-    parse_float: Optional[Callable[[str], Any]] = None,
-    parse_int: Optional[Callable[[str], Any]] = None,
+    parse_number: Optional[Callable[[str], Any]] = None,
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
@@ -95,8 +95,7 @@ def load(
         encoding=encoding,
         cls=cls,
         object_hook=object_hook,
-        parse_float=parse_float,
-        parse_int=parse_int,
+        parse_number=parse_number,
         object_pairs_hook=object_pairs_hook,
         allow_trailing=allow_trailing,
         start=start,
@@ -112,8 +111,7 @@ def loads(
     encoding: Optional[str] = None,
     cls: Any = None,
     object_hook: Optional[Callable[[Mapping[str, Any]], Any]] = None,
-    parse_float: Optional[Callable[[str], Any]] = None,
-    parse_int: Optional[Callable[[str], Any]] = None,
+    parse_number: Optional[Callable[[str], Any]] = None,
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
@@ -150,8 +148,7 @@ def loads(
         encoding=encoding,
         cls=cls,
         object_hook=object_hook,
-        parse_float=parse_float,
-        parse_int=parse_int,
+        parse_number=parse_number,
         object_pairs_hook=object_pairs_hook,
         allow_trailing=allow_trailing,
         start=start,
@@ -167,8 +164,7 @@ def parse(
     encoding: Optional[str] = None,
     cls: Any = None,
     object_hook: Optional[Callable[[Mapping[str, Any]], Any]] = None,
-    parse_float: Optional[Callable[[str], Any]] = None,
-    parse_int: Optional[Callable[[str], Any]] = None,
+    parse_number: Optional[Callable[[str], Any]] = None,
     object_pairs_hook: Optional[
         Callable[[Iterable[Tuple[str, Any]]], Any]
     ] = None,
@@ -242,8 +238,7 @@ def parse(
     value = _convert(
         ast,
         object_hook=object_hook,
-        parse_float=parse_float,
-        parse_int=parse_int,
+        parse_number=parse_number,
         object_pairs_hook=object_pairs_hook,
     )
     return value, None, pos
@@ -252,8 +247,7 @@ def parse(
 def _convert(
     ast,
     object_hook,
-    parse_float,
-    parse_int,
+    parse_number,
     object_pairs_hook,
 ):
     def _dictify(pairs):
@@ -273,23 +267,34 @@ def _convert(
             return object_hook(dict(key_pairs))
         return dict(key_pairs)
 
-    parse_float = parse_float or float
-    parse_int = parse_int or int
-    return _walk_ast(ast, _dictify, parse_float, parse_int)
+    return _walk_ast(ast, _dictify, parse_number or _decode_number)
+
+
+def _decode_number(v):
+    s = v.replace('_', '')
+    if s.startswith('0x'):
+        return int(s, base=16)
+    if s.startswith('0b'):
+        return int(s, base=2)
+    if s.startswith('0o'):
+        return int(s, base=8)
+    if '.' in s or 'e' in s or 'E' in s:
+        return float(s)
+    return int(s)
 
 
 def _decode_str(s, is_rstr, is_dstr):
     i = 0
     ret = []
     while i < len(s):
-        if s[i] == '\\' and not is_raw:
+        if s[i] == '\\' and not is_rstr:
             i, c = _decode_escape(s, i)
             ret.append(c)
         else:
             ret.append(s[i])
             i += 1
     if is_dstr:
-        return _dedent(''.join(ret))
+        return dedent(''.join(ret))
     return ''.join(ret)
 
 
@@ -324,8 +329,16 @@ def _decode_escape(s, i):
     if c == 'U':
         if _check(s, i + 2, 8, _ishex):
             return i + 10, chr(int(s[i + 2 : i + 10], base=16))
-    if _check(s, i + 1, 3, _isoct):
-        return chr(int(s[i + 1 : i + 4], base=8))
+    if len(s) > i + 1 and _isoct(s[i+1]):
+        x = int(s[i+1], base=8)
+        j = 2
+        if len(s) > i + 2 and _isoct(s[i+2]):
+            x = x * 8 + int(s[i+2], base=8)
+            j += 1
+        if len(s) > i + 3 and _isoct(s[i+3]):
+            x = x * 8 + int(s[i+2], base=8)
+            j += 1
+        return j, chr(x)
     raise ValueError(f'Bad escape in str {repr(s)} at pos {i}')
 
 
@@ -343,11 +356,32 @@ def _isoct(ch):
     return '0' <= ch <= '7'
 
 
+def dedent(s):
+    # TODO: Figure out what to do with tabs and other non-space whitespace.
+
+    def _indent(s):
+        i = 0
+        while i < len(s) and s[i] == ' ':
+            i += 1
+        return i
+
+    lines = s.splitlines()
+    if len(lines) < 2:
+        return s
+
+    line0 = lines[0]
+    min_indent = min(_indent(l) for l in lines[1:])
+    if line0.strip():
+        r = line0 + '\n'
+    else:
+        r = ''
+    return r + '\n'.join(l[min_indent:] for l in lines[1:]) + '\n'
+
+
 def _walk_ast(
     el,
     dictify: Callable[[Iterable[Tuple[str, Any]]], Any],
-    parse_float,
-    parse_int,
+    parse_number,
 ):
     ty, tag, v = el
     if ty == 'true':
@@ -357,21 +391,17 @@ def _walk_ast(
     if ty == 'null':
         return None
     if ty == 'number':
-        if v.startswith('0x') or v.startswith('0X'):
-            return parse_int(v, base=16)
-        if '.' in v or 'e' in v or 'E' in v:
-            return parse_float(v)
-        return parse_int(v)
+        return parse_number(v)
     if ty == 'string':
         return _decode_str(v, 'r' in tag, 'd' in tag)
     if ty == 'object':
         pairs = []
         for key, val_expr in v:
-            val = _walk_ast(val_expr, dictify, parse_float, parse_int)
+            val = _walk_ast(val_expr, dictify, parse_number)
             pairs.append((key, val))
         return dictify(pairs)
     if ty == 'array':
-        return [_walk_ast(el, dictify, parse_float, parse_int) for el in v]
+        return [_walk_ast(el, dictify, parse_number) for el in v]
     raise ValueError('unknown el: ' + el)  # pragma: no cover
 
 
@@ -670,18 +700,18 @@ class Encoder:
             raise ValueError('Circular reference detected.')
         seen.add(i)
 
-        # Ideally we'd use collections.abc.Mapping and collections.abc.Sequence
-        # here, but for backwards-compatibility with potential old callers,
-        # we only check for the two attributes we need in each case.
         if self.indent:
-            max_len = 80 - level * self.indent
+            if isinstance(self.indent, str):
+                max_len = 80 - len(level * self.indent)
+            else:
+                max_len = 80 - level * self.indent
         else:
             max_len = 80
-        if hasattr(obj, 'keys') and hasattr(obj, '__getitem__'):
+        if isinstance(obj, collections.abc.Mapping):
             s = self._encode_dict(obj, seen, level + 1, oneline=True)
             if len(s) > max_len or '\n' in s:
                 s = self._encode_dict(obj, seen, level + 1, oneline=False)
-        elif hasattr(obj, '__getitem__') and hasattr(obj, '__iter__'):
+        elif isinstance(obj, collections.abc.Sequence):
             s = self._encode_array(obj, seen, level + 1, oneline=True)
             if len(s) > max_len or '\n' in s:
                 s = self._encode_array(obj, seen, level + 1, oneline=False)

@@ -28,13 +28,19 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 
-import floyd_datafile
+try:
+    import floyd_datafile
+except ModuleNotFoundError as e:
+    src_dir = os.path.dirname(os.path.dirname(__file__))
+    sys.path.insert(0, src_dir)
+    import floyd_datafile
 
 
 def main(argv=None, host=None):
-    host = host or floyd_datafile.host.Host()
+    host = host or floyd_datafile.support.Host()
 
     args = _parse_args(host, argv)
 

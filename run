@@ -227,7 +227,7 @@ class Runner:
     def run_coverage(self):
         env = os.environ.copy()
         if self.args.unit:
-            env['SKIP'] = 'integration'
+            env['TYP_SKIP'] = 'integration'
             self.args.omit = '*_test.py'
         cmd = self.run_cmd + ['-m', 'coverage', 'run']
         if self.args.branch:
@@ -359,7 +359,7 @@ class Runner:
             cmd.extend(['-k', self._trim_test_glob(test)])
         env = os.environ.copy()
         if self.args.unit:
-            env['SKIP'] = 'integration'
+            env['TYP_SKIP'] = 'integration'
         self.call(cmd, env=env)
 
     def set_func(self, subp, method):

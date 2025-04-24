@@ -27,23 +27,23 @@ value        = 'true'                                 -> ['true', '', null]
              | object
              | string
 
-number       = ('-'|'+')? int frac? exp?
-             | '0b' bin ((bin | '_')* bin)?
-             | '0o' oct ((oct | '_')* oct)?
-             | '0x' hex ((hex | '_')* hex)?
+number       = '0b' bin ('_' bin | bin)*
+             | '0o' oct ('_' oct | oct)*
+             | '0x' hex ('_' hex | hex)*
+             | ('-' | '+')? int frac? exp?
 
 int          = '0'
              | nonzerodigit digit_sep
 
-digit_sep    = ((digit | '_')* digit)?
+digit_sep    = ('_' digit | digit)*
 
 digit        = [0-9]
 
 nonzerodigit = [1-9]
 
-frac         = '.' digit_sep
+frac         = '.' digit? digit_sep
 
-exp          = ('e'|'E') ('+'|'-')? digit_sep
+exp          = ('e'|'E') ('+'|'-')? digit? digit_sep
 
 bin          = [01]
 
@@ -84,6 +84,9 @@ raw_str      = tsq <(^tsq)*> tsq                      -> $2
              | bq <(^bq)*> bq                         -> $2
              | 'L' <sq '='+ sq>:lq
                <(^(={lq}))*> ={lq}                    -> $3
+             | '[' '='+:eqs '['
+               <(^(']' ={eqs} ']'))*>:s
+               ']' ={eqs} ']'                         -> s
 
 str          = tsq <(~tsq bchar)*> tsq                -> $2
              | tdq <(~tdq bchar)*> tdq                -> $2
@@ -93,6 +96,9 @@ str          = tsq <(~tsq bchar)*> tsq                -> $2
              | bq <(~bq bchar)*> bq                   -> $2
              | 'L' <sq '='+ sq>:lq
                <(~(={lq}) bchar)*> ={lq}              -> $3
+             | '[' '='+:eqs '['
+               <(~(']' ={eqs} ']') bchar)*>:s
+               ']' ={eqs} ']'                         -> s
 
 punct        = /(L'=+')|[\/#'"`\[\](){}:=,]/
 
@@ -123,13 +129,13 @@ escape       = bslash
 
 nchar        = [0-9A-Z -]
 
-array        = array_tag '[' value? (','? value)* ']' -> ['array', $1,
-                                                          concat($3, $4)]
+array        = array_tag '[' value? (','? value)* ','? ']' -> ['array', $1,
+                                                               concat($3, $4)]
 
 array_tag    = tag ~(_whitespace | _comment)          -> $1
 
 object       = object_tag
-               '{' member? (','? member)* '}'         -> ['object', $1,
+               '{' member? (','? member)* ','? '}'    -> ['object', $1,
                                                           concat($3, $4)]
 
 object_tag   = tag ~(_whitespace | _comment)          -> $1
