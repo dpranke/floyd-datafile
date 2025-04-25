@@ -32,7 +32,8 @@ dev = [
     'ruff==0.11.2',
     'twine==6.1.0',
     'uv==0.6.11',
-    'typ @ file:///${PROJECT_ROOT}/../typ-dev',
+    'typ @ file:///${PROJECT_ROOT}/subpackages/typ-dev',
+    'pyfloyd @ file:///${PROJECT_ROOT}/subpackages/pyfloyd',
 ]
 
 [project.urls]
@@ -56,3 +57,10 @@ quote-style = "single"
 
 [tool.setuptools.dynamic]
 version = {attr = "floyd_datafile.__version__"}
+
+[tool.uv.sources]
+pyfloyd = { workspace = true }
+typ = { workspace = true }
+
+[tool.uv.workspace]
+members = [ "subpackages/*" ]
