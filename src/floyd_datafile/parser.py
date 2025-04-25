@@ -55,8 +55,9 @@ class _Parser:
         self._text = text
         self._end = len(self._text)
         self._errpos = 0
-        self._expected_externs = {'_allow_trailing'}
-        self._externs = {}
+        self._externs = {
+            'allow_trailing': True,
+        }
         self._failed = False
         self._path = path
         self._pos = 0
@@ -66,11 +67,15 @@ class _Parser:
         self._scopes = []
 
     def parse(self, externs: Externs = None):
-        self._externs = externs or {}
-        errors = self._check_externs()
+        errors = ''
+        if externs:
+            for k, v in externs.items():
+                if k in self._externs:
+                    self._externs[k] = v
+                else:
+                    errors += f'Unexpected extern "{k}"\n'
         if errors:
             return Result(None, errors, 0)
-
         try:
             self._r_grammar()
             if self._failed:
@@ -142,7 +147,7 @@ class _Parser:
             self._succeed([self._val])
 
     def _r_trailing(self):
-        v = not self._externs['_allow_trailing']
+        v = not self._externs['allow_trailing']
         if v is True:
             self._succeed(v)
         elif v is False:
@@ -1832,7 +1837,7 @@ class _Parser:
         self._s_escape_9()
 
     def _s_escape_1(self):
-        p = '[abfnrtv\'"`]'
+        p = "[abfnrtv'\"`]"
         if p not in self._regexps:
             self._regexps[p] = re.compile(p)
         m = self._regexps[p].match(self._text, self._pos)

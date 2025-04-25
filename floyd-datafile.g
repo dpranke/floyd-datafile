@@ -5,17 +5,17 @@
 
 %tokens      = number | str | raw_str | bare_word | eol
 
-// _allow_trailing is used to indicate whether parsing should stop
+// allow_trailing is used to indicate whether parsing should stop
 // once a value (and any trailing filler) has been reached; by default
 // it is false, and it is an error for there to be any trailing non-filler
 // characters before the end of the string. If allow_trailing is set
 // to true, parsing stops without error ifa trailing character is reached.
-%externs     = _allow_trailing
+%externs     = allow_trailing                         -> true
 
 grammar      = value _filler trailing?                -> $1
              | member+ _filler trailing?              -> ['object', '', $1]
 
-trailing     = ?{!_allow_trailing} end
+trailing     = ?{!allow_trailing} end
 
 eol          = '\r\n' | '\r' | '\n'
 
@@ -66,15 +66,15 @@ string_list  = string_tag
                '(' string (','? string)* ')'          -> ['string_list', $1,
                                                           scons($3, $4)]
 raw_str_tag  = ('r' | 'rd' | 'dr')
-                 ~(_whitespace | _comment)            -> $1
+                 ~(%whitespace | %comment)            -> $1
 
-string_tag   = ('d' | tag) ~(_whitespace | _comment)  -> $1
+string_tag   = ('d' | tag) ~(%whitespace | %comment)  -> $1
 
 tag          = bare_word
              |                                        -> ''
 
 bare_word    = ~('true' | 'false' | 'null' | number)
-               <(^(punct | _whitespace))+>
+               <(^(punct | %whitespace))+>
 
 raw_str      = tsq <(^tsq)*> tsq                      -> $2
              | tdq <(^tdq)*> tdq                      -> $2
@@ -132,12 +132,12 @@ nchar        = [0-9A-Z -]
 array        = array_tag '[' value? (','? value)* ','? ']' -> ['array', $1,
                                                                concat($3, $4)]
 
-array_tag    = tag ~(_whitespace | _comment)          -> $1
+array_tag    = tag ~(%whitespace | %comment)          -> $1
 
 object       = object_tag
                '{' member? (','? member)* ','? '}'    -> ['object', $1,
                                                           concat($3, $4)]
 
-object_tag   = tag ~(_whitespace | _comment)          -> $1
+object_tag   = tag ~(%whitespace | %comment)          -> $1
 
 member       = string (':'|'=') value                 -> [$1, $3]

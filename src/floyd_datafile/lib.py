@@ -230,7 +230,7 @@ def parse(
     if not s:
         raise ValueError('Empty strings are not legal Floyd datafiles')
     start = start or 0
-    externs = {'_allow_trailing': allow_trailing}
+    externs = {'allow_trailing': allow_trailing}
     ast, err, pos = parser.parse(s, '<string>', externs)
     if err:
         return None, err, pos
