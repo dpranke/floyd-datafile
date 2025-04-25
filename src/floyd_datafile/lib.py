@@ -329,14 +329,14 @@ def _decode_escape(s, i):
     if c == 'U':
         if _check(s, i + 2, 8, _ishex):
             return i + 10, chr(int(s[i + 2 : i + 10], base=16))
-    if len(s) > i + 1 and _isoct(s[i+1]):
-        x = int(s[i+1], base=8)
+    if len(s) > i + 1 and _isoct(s[i + 1]):
+        x = int(s[i + 1], base=8)
         j = 2
-        if len(s) > i + 2 and _isoct(s[i+2]):
-            x = x * 8 + int(s[i+2], base=8)
+        if len(s) > i + 2 and _isoct(s[i + 2]):
+            x = x * 8 + int(s[i + 2], base=8)
             j += 1
-        if len(s) > i + 3 and _isoct(s[i+3]):
-            x = x * 8 + int(s[i+2], base=8)
+        if len(s) > i + 3 and _isoct(s[i + 3]):
+            x = x * 8 + int(s[i + 2], base=8)
             j += 1
         return j, chr(x)
     raise ValueError(f'Bad escape in str {repr(s)} at pos {i}')

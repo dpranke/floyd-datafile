@@ -78,7 +78,7 @@ class LoadTest(unittest.TestCase):
         self.check('```foo```', 'foo')
 
     def test_str_quote_escapes(self):
-        self.check('"\\\'\\"\\`"', "'\"`")
+        self.check('"\\\'\\"\\`"', '\'"`')
 
     def test_str_oct_escapes(self):
         self.check(r'\0', chr(0))

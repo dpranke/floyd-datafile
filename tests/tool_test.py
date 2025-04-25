@@ -79,8 +79,9 @@ class Script(floyd_datafile.support.ScriptTestCase, _Tests):
 
 
 class Tool(floyd_datafile.support.ScriptTestCase, _Tests):
-    script = os.path.join(os.path.dirname(__file__),
-                          '..', 'src', 'floyd_datafile', 'tool.py')
+    script = os.path.join(
+        os.path.dirname(__file__), '..', 'src', 'floyd_datafile', 'tool.py'
+    )
     outside_venv = True
 
 

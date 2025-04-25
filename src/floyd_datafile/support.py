@@ -251,7 +251,7 @@ class HostTestCase(_BaseTestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding='utf-8',
-            env=env
+            env=env,
         ) as proc:
             actual_out, actual_err = proc.communicate(input=stdin)
             actual_ret = proc.returncode

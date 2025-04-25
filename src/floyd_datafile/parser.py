@@ -1832,7 +1832,7 @@ class _Parser:
         self._s_escape_9()
 
     def _s_escape_1(self):
-        p = "[abfnrtv'\"`]"
+        p = '[abfnrtv\'"`]'
         if p not in self._regexps:
             self._regexps[p] = re.compile(p)
         m = self._regexps[p].match(self._text, self._pos)
