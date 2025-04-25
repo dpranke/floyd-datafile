@@ -19,6 +19,7 @@ class Runner:
     def __init__(self):
         self.arg_parser = None
         self.args = None
+        self.remaining_args = []
         self.grammar = 'floyd-datafile.g'
         self.package = 'floyd_datafile'
         self.top = f'src/{self.package}'
@@ -46,8 +47,12 @@ class Runner:
         subp.add_argument(
             '-v',
             '--verbose',
-            action='store_true',
-            help='Echo commands as they are run.',
+            action='count',
+            default=0,
+            help=(
+                'Echo commands as they are run (pass -v multiple times to'
+                'pass -v to commands as well)'
+            ),
         )
         subp.set_defaults(func=lambda _: method())
         return subp
@@ -96,6 +101,9 @@ class Runner:
         )
         subp.add_argument(
             '-u', '--unit', action='store_true', help='Only run unit tests.'
+        )
+        subp.add_argument(
+            '-t', '--typ', action='store_true', help='Run tests with typ.'
         )
         subp.add_argument('test', nargs='*', action='store')
 
@@ -184,11 +192,16 @@ class Runner:
             help='Stop on first fail or error',
         )
         subp.add_argument(
+            '-t', '--typ', action='store_true', help='Run tests with typ.'
+        )
+        subp.add_argument(
             '-u', '--unit', action='store_true', help='Only run unit tests.'
         )
         subp.add_argument('test', nargs='*', action='store')
 
-        self.args = self.arg_parser.parse_args(self._shuffle_argv(argv))
+        self.args, self.remaining_args = self.arg_parser.parse_known_args(
+            self._shuffle_argv(argv)
+        )
 
         self.uv_path = shutil.which('uv')
         if self.uv_path is None:
@@ -229,29 +242,34 @@ class Runner:
         if self.args.unit:
             env['TYP_SKIP'] = 'integration'
             self.args.omit = '*_test.py'
-        cmd = self.run_cmd + ['-m', 'coverage', 'run']
-        if self.args.branch:
-            cmd.append('--branch')
-        cmd.extend(
-            [
-                '-m',
-                'unittest',
-                'discover',
-                '-s',
-                'tests',
-                '-p',
-                '*_test.py',
-            ],
-        )
-        if self.args.verbose:
-            cmd.append('-v')
-        for test in self.args.test:
-            cmd.extend(['-k', self._trim_test_glob(test)])
+        if self.args.typ:
+            cmd = self.run_cmd + ['-m', 'typ', '-c']
+            cmd.extend(self.args.test)
+        else:
+            cmd = self.run_cmd + ['-m', 'coverage', 'run']
+            if self.args.branch:
+                cmd.append('--branch')
+            cmd.extend(
+                [
+                    '-m',
+                    'unittest',
+                    'discover',
+                    '-s',
+                    'tests',
+                    '-p',
+                    '*_test.py',
+                ],
+            )
+            for test in self.args.test:
+                cmd.extend(['-k', self._trim_test_glob(test)])
+        if self.args.verbose > 1:
+            cmd.append('-' + 'v' * (self.args.verbose - 1))
         self.call(cmd, env=env)
-        cmd = self.run_cmd + ['-m', 'coverage', 'report', '--show-missing']
-        if self.args.omit:
-            cmd.append(f'--omit={self.args.omit}')
-        self.call(cmd)
+        if not self.args.typ:
+            cmd = self.run_cmd + ['-m', 'coverage', 'report', '--show-missing']
+            if self.args.omit:
+                cmd.append(f'--omit={self.args.omit}')
+            self.call(cmd)
 
     def run_devenv(self):
         if self.uv_path is None:
@@ -338,25 +356,35 @@ class Runner:
             print(f'{self.parser_file} regenerated.')
 
     def run_tests(self):
-        cmd = self.run_cmd + [
-            '-m',
-            'unittest',
-            'discover',
-            '-p',
-            '*_test.py',
-            'tests',
-        ]
+        if self.args.typ:
+            cmd = self.run_cmd + [
+                '-m',
+                'typ',
+            ]
+        else:
+            cmd = self.run_cmd + [
+                '-m',
+                'unittest',
+                'discover',
+                '-p',
+                '*_test.py',
+                'tests',
+            ]
         if self.args.quiet:
             cmd.append('-q')
-        if self.args.verbose:
-            cmd.append('-v')
+        if self.args.verbose > 1:
+            cmd.append('-' + 'v' * (self.args.verbose - 1))
         if self.args.failfast:
             cmd.append('-f')
-        if self.args.durations:
+        if not self.args.typ and self.args.durations:
             cmd.extend(['--durations', self.args.durations])
 
-        for test in self.args.test:
-            cmd.extend(['-k', self._trim_test_glob(test)])
+        if self.args.typ:
+            cmd.extend(test for test in self.args.test)
+        else:
+            for test in self.args.test:
+                cmd.extend(['-k', self._trim_test_glob(test)])
+        cmd.extend(self.remaining_args)
         env = os.environ.copy()
         if self.args.unit:
             env['TYP_SKIP'] = 'integration'
@@ -385,7 +413,8 @@ class Runner:
         self.call(
             self.run_cmd
             + [
-                '../pyfloyd/src/pyfloyd/tool.py',
+                '-m',
+                'pyfloyd',
                 '-o',
                 new_file,
                 '--memoize',
@@ -422,12 +451,12 @@ class Runner:
     def _get_version(self):
         if self.version is not None:
             return
-        if 'pyfloyd' in sys.modules:
-            self.version = pyfloyd.__version__
+        if 'floyd_datafile' in sys.modules:
+            self.version = floyd_datafile.__version__
             return
 
         proc = self.call(
-            self.run_cmd + ['-m', 'pyfloyd', '-V'], capture_output=True
+            self.run_cmd + ['-m', 'floyd_datafile', '-V'], capture_output=True
         )
         self.version = proc.stdout.decode('utf8').strip()
 
